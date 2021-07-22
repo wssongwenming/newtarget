@@ -211,6 +211,7 @@
         Mustache.parse(scoreTemplate);
         loadShootingRangeData();
 
+        $('#_scoretableparent1').scrollRight( $('#_scoretableparent1')[0].scrollWidth);
 
         function loadShootingRangeData(){
             var url = "/sys/shootingrange/shootingrangedata.json";
@@ -253,7 +254,9 @@
 
                             },
                             "showCameraStatus":function () {
-                                return this.cameraStatus == 0 ? '正常' : (this.cameraStatus == 1 ? '异常' : "新添加");
+                                //默认采靶终端是正常，直接返回正常状态
+                                // return this.cameraStatus == 0 ? '正常' : (this.cameraStatus == 1 ? '异常' : "新添加");
+                                return '正常';
                             },
                             "showTargetStatus":function () {
                                 return this.targetStatus == 0 ? '正常' : (this.targetStatus == 1 ? '异常' : "新添加");

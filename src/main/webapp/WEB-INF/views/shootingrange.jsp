@@ -34,8 +34,8 @@
             {{#traineeShooting_deviceGroup_data_list}}
                 <div class="_single">
                     <div class="border-wording">{{deviceGroupIndex}}号靶</div>
-                    <div class="_img-parent" id="_goals{{deviceGroupIndex}}">
-                        <img src="/assets/images/icon-msr.png"/>
+                    <div class="_img-parent-new" id="_goals{{deviceGroupIndex}}">
+                        <img src="/assets/images/icon-msr-new.png"/>
                     </div>
 
                     <div class="person_info">
@@ -91,7 +91,6 @@
                     <div id="mytime" style="float:right; line-height:40px;margin-right:5px;font-size:13pt;color:white;margin-top:3px">10:24:46</div>
                 </div>
 				<div class="right-click">
-
 					<div style="float:left">
 						<div class="click-img">
                             <a href="javascript:deviceDetection()">
@@ -101,12 +100,20 @@
 						<span>靶位检测</span>
 					</div>
 					<div style="float:left">
+						<div id="uploadpaper"  class="click-img">
+						    <a  href="javascript:uploadPaper()">
+								<img src="/assets/images/icon-r.png"/>
+							</a>
+						</div>
+						<span id="txt_uploadpaper">补充靶纸</span>
+					</div>
+					<div style="float:left">
 						<div class="click-img">
 						    <a href="javascript:changeShootingTrainee()">
 								<img src="/assets/images/icon-r.png"/>
 							</a>
 						</div>
-						<span>更迭射击人员</span>
+						<span>人员更迭</span>
 					</div>
 					<div style="float:left">
 						<div class="click-img">
@@ -124,29 +131,22 @@
 						</div>
 						<span>结束射击</span>
 					</div>
+
 					<div style="float:left">
-						<div class="click-img">
-						    <a href="javascript:uploadPaper()">
-								<img src="/assets/images/icon-r.png"/>
-							</a>
-						</div>
-						<span>装载靶纸</span>
-					</div>
-					<div style="float:left">
-						<div class="click-img">
+						<div id="downloadpaper" class="click-img">
 						    <a href="javascript:downloadPaper()">
-								<img src="/assets/images/icon-r.png"/>
+								<img   src="/assets/images/icon-r.png"/>
 							</a>
 						</div>
-						<span>卸载靶纸</span>
+						<span id="txt_downloadpaper">卸载靶纸</span>
 					</div>
 					<div style="float:left">
 						<div class="click-img">
-						    <a href="/sys/trainee/traineegroupquery.page">
+						    <a  href="/sys/trainee/traineegroupquery.page">
 								<img src="/assets/images/icon-r.png"/>
 							</a>
 						</div>
-						<span>调整靶位编组</span>
+						<span>编组调整</span>
 					</div>
 
 					<div style="float:left">
@@ -184,9 +184,9 @@
     <div class="_bottom">
         <div class="_bottom-top">消息区:</div>
         <div class="_bottom-font">
-            1号靶三正常<br/>
-            2号靶李四正常<br/>
-            3号靶机故障
+            <%--1号靶三正常<br/>--%>
+            <%--2号靶李四正常<br/>--%>
+            <%--3号靶机故障--%>
         </div>
     </div>
 </script>
@@ -258,14 +258,21 @@
                                 }
                             },
                             "showDisplayStatus":function () {
-                                return this.displayStatus == 0 ? '正常' : (this.displayStatus == 1 ? '异常' : "新添加");
+                                //默认显靶终端状态正常。直接返回正常
+                                //return this.displayStatus == 0 ? '正常' : (this.displayStatus == 1 ? '异常' : "新添加");
+                                return '正常';
                                 
                             },
                             "showCameraStatus":function () {
-                                return this.cameraStatus == 0 ? '正常' : (this.cameraStatus == 1 ? '异常' : "新添加");
+
+                                //默认采靶终端是正常，直接返回正常状态
+                                // return this.cameraStatus == 0 ? '正常' : (this.cameraStatus == 1 ? '异常' : "新添加");
+                                return '正常';
                             },
                             "showTargetStatus":function () {
-                                return this.targetStatus == 0 ? '正常' : (this.targetStatus == 1 ? '异常' : "新添加");
+                                //现在默认靶机正常，后期根绝升降靶的结果进行具体调整
+                                //return this.targetStatus == 0 ? '正常' : (this.targetStatus == 1 ? '异常' : "新添加");
+                                return '正常'
                             }
 
                             
@@ -275,13 +282,15 @@
                         setLeftWidth();//动态设置界面宽度，bamian
                         setTableWidth();
                         showScores();
+                        // $('.person-score').scrollLeft( $('.person-score')[0].scrollWidth);
+                        $('.person-score').scrollLeft(1000);
                         function showScores () {
-                            var  diameter=150;//._img-parent为靶图的父元素为正方形宽高度为150，靶图无论大小都被限制为150px见方大小，
-                            var　bullsEyeRadius=150/10;//靶心半径为靶图直径的１０分之一
+                            var  diameter=200;//._img-parent为靶图的父元素为正方形宽高度为150，靶图无论大小都被限制为150px见方大小，
+                            var　bullsEyeRadius=200/10;//靶心半径为靶图直径的１０分之一
                             //var  targetBullsEyeRadius=this.radius;
                             //var radio=FloatDiv(bullsEyeRadius,targetBullsEyeRadius);
-                            var bullsEye_X=FloatDiv(diameter,2)//靶心ｘ坐标
-                            var bullsEye_Y=FloatMul(diameter,0.6)//
+                            var bullsEye_X=FloatDiv(diameter,2)+8//靶心ｘ坐标
+                            var bullsEye_Y=FloatMul(diameter,0.6)+2//
                             var deviceGroup_data_list=result.data.traineeShooting_deviceGroup_data//所有靶位的数据等同traineeShooting_deviceGroup_data_list
                             <!--开始把数组中回传数据的px,py即x,y坐标根据两端坐标比例进行变换,在存回去,供下一步解析模板使用-->
                             for (var m=0;m<deviceGroup_data_list.length;m++)
@@ -295,8 +304,8 @@
                                         var score = deviceGroupDataList.shootingScoreList[n];
                                         var radius = score.radius;//传回来的显靶终端靶心半径以px为单位
                                         // var radius_mm=score.mmOfRadius;////传回来的显靶终端靶心半径以mm为单位,，暂时没有用因为服务器端用的的以px为单位
-                                        var px = score.px;//取得回传的x
-                                        var py = score.py;//取得回传的y
+                                        var px = score.px;//取得回传的x,是以弹孔的中心点为参考点的
+                                        var py = score.py;//取得回传的y，是以弹孔的中心点为参考点的
                                         var radio = FloatDiv(bullsEyeRadius, radius);
                                         var X = bullsEye_X + px * radio;//返回的x以左为负数
                                         var Y = bullsEye_Y + py * radio;//返回的y以下为正
@@ -493,39 +502,6 @@
         return ((arg1*m-arg2*m)/m).toFixed(n);
     }
 
-    function uploadPaper(){
-            if(confirm('所有靶位显示已登陆，确定要开始射击吗')==true){
-                $.ajax({
-                    url: "/sys/shootingrange/uploadPaper.json",
-                    contentType: "application/json",
-                    success: function (result) {
-                        if (result.ret) {
-                        }
-                    }
-                });
-            }else{
-            }
-
-    }
-
-    function downloadPaper(){
-        if(confirm('所有靶位显示已登陆，确定要开始射击吗')==true){
-            $.ajax({
-                url: "/sys/shootingrange/downloadPaper.json",
-                contentType: "application/json",
-                success: function (result) {
-                    if (result.ret) {
-                    }
-                }
-            });
-        }else{
-        }
-
-    }
-
-
-
-
 　　//更迭射击人员
     function changeShootingTrainee()
     {
@@ -575,14 +551,20 @@
                                 }
                             },
                             "showDisplayStatus": function () {
-                                return this.displayStatus == 0 ? '未知' : (this.displayStatus == 1 ? '正常' : "异常");
+                                //默认显靶终端状态正常。直接返回正常
+                                //return this.displayStatus == 0 ? '正常' : (this.displayStatus == 1 ? '异常' : "新添加");
+                                return '正常';
 
                             },
                             "showCameraStatus": function () {
-                                return this.cameraStatus == 0 ? '未知' : (this.cameraStatus == 1 ? '正常' : "异常");
+                                //默认采靶终端是正常，直接返回正常状态
+                                // return this.cameraStatus == 0 ? '正常' : (this.cameraStatus == 1 ? '异常' : "新添加");
+                                return '正常';
                             },
                             "showTargetStatus": function () {
-                                return this.targetStatus == 0 ? '未知' : (this.targetStatus == 1 ? '正常' : "异常");
+                                //现在默认靶机正常，后期根绝升降靶的结果进行具体调整
+                                //return this.targetStatus == 0 ? '正常' : (this.targetStatus == 1 ? '异常' : "新添加");
+                                return '正常'
                             }
 
 
@@ -591,14 +573,16 @@
                         setLeftWidth();//动态设置界面宽度，bamian
                         setTableWidth();
                         showScores();
+                        //把成绩列表始终定位到最后
+                        $('.person-score').scrollLeft(1000);
 
                         function showScores() {
-                            var diameter = 150;//._img-parent为靶图的父元素为正方形宽高度为150，靶图无论大小都被限制为150px见方大小，
-                            var bullsEyeRadius = 150 / 10;//靶心半径为靶图直径的１０分之一
+                            var diameter = 200;//._img-parent为靶图的父元素为正方形宽高度为150，靶图无论大小都被限制为150px见方大小，
+                            var bullsEyeRadius = 200 / 10;//靶心半径为靶图直径的１０分之一
                             //var  targetBullsEyeRadius=this.radius;
                             //var radio=FloatDiv(bullsEyeRadius,targetBullsEyeRadius);
-                            var bullsEye_X = FloatDiv(diameter, 2)//
-                            var bullsEye_Y = FloatMul(diameter, 0.6)//
+                            var bullsEye_X=FloatDiv(diameter,2)+8//靶心ｘ坐标
+                            var bullsEye_Y=FloatMul(diameter,0.6)+2//
                             var deviceGroup_data_list = result.data.traineeShooting_deviceGroup_data//一个靶位数据：同traineeShooting_deviceGroup_data_list
                             <!--开始把数组中回传数据的px,py即x,y坐标根据两端坐标比例进行变换,在存回去,供下一步解析模板使用-->
                             for (var m = 0; m < deviceGroup_data_list.length; m++) {
@@ -777,14 +761,20 @@
                                     }
                                 },
                                 "showDisplayStatus": function () {
-                                    return this.displayStatus == 0 ? '未知' : (this.displayStatus == 1 ? '正常' : "异常");
+                                    //默认显靶终端状态正常。直接返回正常
+                                    //return this.displayStatus == 0 ? '正常' : (this.displayStatus == 1 ? '异常' : "新添加");
+                                    return '正常';
 
                                 },
                                 "showCameraStatus": function () {
-                                    return this.cameraStatus == 0 ? '未知' : (this.cameraStatus == 1 ? '正常' : "异常");
+                                    //默认采靶终端是正常，直接返回正常状态
+                                    // return this.cameraStatus == 0 ? '正常' : (this.cameraStatus == 1 ? '异常' : "新添加");
+                                    return '正常';
                                 },
                                 "showTargetStatus": function () {
-                                    return this.targetStatus == 0 ? '未知' : (this.targetStatus == 1 ? '正常' : "异常");
+                                    //现在默认靶机正常，后期根绝升降靶的结果进行具体调整
+                                    //return this.targetStatus == 0 ? '正常' : (this.targetStatus == 1 ? '异常' : "新添加");
+                                    return '正常'
                                 }
 
 
@@ -793,14 +783,15 @@
                             setLeftWidth();//动态设置界面宽度，bamian
                             setTableWidth();
                             showScores();
-
+                            //把成绩列表始终定位到最后
+                            $('.person-score').scrollLeft(1000);
                             function showScores() {
-                                var diameter = 150;//._img-parent为靶图的父元素为正方形宽高度为150，靶图无论大小都被限制为150px见方大小，
-                                var bullsEyeRadius = 150 / 10;//靶心半径为靶图直径的１０分之一
+                                var diameter = 200;//._img-parent为靶图的父元素为正方形宽高度为150，靶图无论大小都被限制为150px见方大小，
+                                var bullsEyeRadius = 200 / 10;//靶心半径为靶图直径的１０分之一
                                 //var  targetBullsEyeRadius=this.radius;
                                 //var radio=FloatDiv(bullsEyeRadius,targetBullsEyeRadius);
-                                var bullsEye_X = FloatDiv(diameter, 2)//
-                                var bullsEye_Y = FloatMul(diameter, 0.6)//
+                                var bullsEye_X=FloatDiv(diameter,2)+8//靶心ｘ坐标
+                                var bullsEye_Y=FloatMul(diameter,0.6)+4//
                                 var deviceGroup_data_list = result.data.traineeShooting_deviceGroup_data//等同traineeShooting_deviceGroup_data_list
                                 <!--开始把数组中回传数据的px,py即x,y坐标根据两端坐标比例进行变换,在存回去,供下一步解析模板使用-->
                                 for (var m = 0; m < deviceGroup_data_list.length; m++) {
@@ -989,54 +980,66 @@
 
 
     function uploadPaper(){
-        $.ajax({
-            url: "/sys/shootingrange/uploadPaper.json",
-            contentType: "application/json",
-            success: function (result) {
-                if (result.ret) {
 
-                } else {
+        if(confirm('确实要补靶吗？')==true) {
+            $.ajax({
+                url: "/sys/shootingrange/uploadPaper.json",
+                contentType: "application/json",
+                success: function (result) {
+                    if (result.ret) {
 
+                    } else {
+
+                    }
+                    $('#txt_uploadpaper').text('正在补充靶纸');
+                    $('#txt_downloadpaper').text('卸载靶纸');
                 }
-            }
-        });
-
+            });
+        }
     }
 
     function downloadPaper(){
-        $.ajax({
-            url: "/sys/shootingrange/downloadPaper.json",
-            contentType: "application/json",
-            success: function (result) {
-                if (result.ret) {
+        if(confirm('确实要卸靶吗？')==true) {
+            $.ajax({
+                url: "/sys/shootingrange/downloadPaper.json",
+                contentType: "application/json",
+                success: function (result) {
+                    if (result.ret) {
 
-                } else {
+                    } else {
 
+                    }
+                    $('#txt_uploadpaper').text('补充靶纸');
+                    $('#txt_downloadpaper').text('正在卸载靶纸');
                 }
-            }
-        });
+            });
+            // $('#uploadpaper').css("pointer-events","auto");
+            // $('#downloadpaper').css("pointer-events","none");
+        }
 
     }
 
     //射击
-    function endShooting(){
-        var shootingRangeDataTemplate = $('#shootingRangeDataTemplate').html();
+    function endShooting() {
+        if (confirm('确实要结束射击吗？') == true){
+            var shootingRangeDataTemplate = $('#shootingRangeDataTemplate').html();
         Mustache.parse(shootingRangeDataTemplate);
         var scoreTemplate = $('#scoreTemplate').html();
         Mustache.parse(scoreTemplate);
-        var finishShooting=true;
+        var finishShooting = true;
         //在更迭射击人员前要判断一下是否还有未完成射击的人员，如有则须确定是否继续
-        $("._info-list").each(function(){
+        $("._info-list").each(function () {
             var info = $(this).find("span").text();
-            if(info.indexOf("打靶完毕")==-1){
-                finishShooting=false;
+            if (info.indexOf("打靶完毕") == -1) {
+                finishShooting = false;
             }
         });
         //所有人员已经打靶结束不需要任何操作
-        if(finishShooting){}
-        else{
-            if(confirm('有靶位非' +
-                '“打靶完毕”状态，确定要借宿打靶吗')==true){
+        if (finishShooting) {
+        }
+        else {
+            if (confirm('有靶位非' +
+                '“打靶完毕”状态，确定要借宿打靶吗') == true) {
                 $.ajax({
                     url: "/sys/shootingrange/endShootingTrainee.json",
                     contentType: "application/json",
@@ -1048,10 +1051,11 @@
                         }
                     }
                 });
-            }else {
+            } else {
 
             }
         }
+    }
 
     }
 
@@ -1123,10 +1127,10 @@
                 var mm_radius=json.mmOfRadius;//传回来的显靶终端靶心半径以mm为单位,暂时不用
                 var deviceGroupIndex=json.deviceGroupIndex;
                 var scoreList=json.holes;
-                var diameter=150;//._img-parent为靶图的父元素为正方形宽高度为150，靶图无论大小都被限制为150px见方大小，
-                var bullsEyeRadius=150/10;//靶心半径为靶图直径的１０分之一
-                var bullsEye_X=FloatDiv(diameter,2)//靶心ｘ坐标
-                var bullsEye_Y=FloatMul(diameter,0.6)//
+                var diameter=200;//._img-parent为靶图的父元素为正方形宽高度为150，靶图无论大小都被限制为150px见方大小，
+                var bullsEyeRadius=200/10;//靶心半径为靶图直径的１０分之一
+                var bullsEye_X=FloatDiv(diameter,2)+8//靶心ｘ坐标
+                var bullsEye_Y=FloatMul(diameter,0.6)+2//
                 for (var n = 0; n < scoreList.length; n++) {
                     var score = scoreList[n];
                     // var radius_mm=score.mmOfRadius;////传回来的显靶终端靶心半径以mm为单位,，暂时没有用因为服务器端用的的以px为单位
@@ -1147,6 +1151,8 @@
                 setTableWidth();
                 $("#_goals" + deviceGroupIndex).find('div').remove();//去掉以前显示的靶环,
                 $("#_goals" + deviceGroupIndex).append(renderedScore);//
+                //把成绩列表始终定位到最后
+                $('.person-score').scrollLeft(1000);
                 break;
 /*          {
                 "code": 1,
@@ -1164,22 +1170,35 @@
                     case 0://靶机，状态数目未定设备状态
 
                         switch (deviceStatus) {
-                            case 0://正常
+                            case 0:
+                                document.getElementById("target_"+deviceGroupIndex).innerText = "靶机：连接正常";
                                 break;
-                            case 1://上纸异常
+                            case 1:
+                                document.getElementById("target_"+deviceGroupIndex).innerText = "靶机：连接异常";
                                 break;
-                            case 2:
+                            case 2://上纸正常
+                                document.getElementById("target_"+deviceGroupIndex).innerText = "靶机：上纸正常";
+                                break;
+                            case 3://下纸正常
+                                document.getElementById("target_"+deviceGroupIndex).innerText = "靶机：下纸正常";
+                                break;
+                            case 4://卡纸故障
+                                document.getElementById("target_"+deviceGroupIndex).innerText = "靶机：卡纸故障";
+                                break;
+                            case 5://缺纸上纸异常
+                                document.getElementById("target_"+deviceGroupIndex).innerText = "靶机：缺纸上纸异常";
                                 break;
 
                         }
-                    case 1://采集
+                    case 1://camera采集
                         var deviceStatus=json.data.deviceStatus;
                         switch (deviceStatus) {
                             case 0:
+                                document.getElementById("camera_"+deviceGroupIndex).innerText = "采集：正常";
                                 break;
                             case 1:
+                                document.getElementById("camera_"+deviceGroupIndex).innerText = "采集：异常";
                                 break;
-
                         }
                         break;
                     case 2://显靶

@@ -4,7 +4,7 @@ html,body{width:100%;height: 100%}
 ._top-left{width: 903px;height:534px;float: left;/*padding-left:2px;*/}
 
 ._singles-parents{overflow-y:scroll;width: 104%;height: 100%;}
-._single{width:180px;height:293px;border:solid 1px black;float:left;margin-top:9px;font-size:10pt;margin-bottom:4px;}
+._single{width:230px;height:370px;border:solid 1px black;float:left;margin-top:9px;font-size:10pt;margin-bottom:4px;}
 /**._img-parent{position: relative;width: 150px;height: 110px;margin-left: 5px;margin-right: 5px;margin-top: -11px;}**/
 ._single img{width:150px;height:110px;margin-left:5px;margin-right:5px;margin-top: -11px;}
 .person_info{width:170px;height:86px;margin-left:5px;margin-right:5px;}
@@ -13,7 +13,7 @@ html,body{width:100%;height: 100%}
 .person_info ._info-img img{height:100%;width:100%;margin-left: 0;position: relative;top: 11px;}
 .person_info ._info-list{float:right;margin-left:4px;padding-top: 8px;height:100%;width:90px;}
 .person_info ._info-list span{float:left;font-size: 8pt;}
-.person-score{width:170px;height:45px;margin-left:5px;margin-right:5px;margin-top:4px;font-size: 4pt;overflow-x:auto; overflow-y:auto;}
+.person-score{width:216px;height:45px;margin-left:5px;margin-right:5px;margin-top:4px;font-size: 4pt;overflow-x:auto; overflow-y:auto;}
 .person-score .score-sum{min-width:30px}
 .person-score tr th{text-align:center;font-size: 8pt;}
 .person-score tr td{text-align:center;font-size: 8pt;}
@@ -37,7 +37,14 @@ html,body{width:100%;height: 100%}
 
 ._img-parent{position: relative;width: 150px;height: 150px;margin-left: 5px;margin-right: 5px;margin-top: -11px;
     border: 1px dimgrey solid;}
-
 ._single ._img-parent img{width:100%;height:100%;margin-left: 0;margin-right: 0;margin-top: 0;}
+
+
+/*._img-parent-new{position: relative;width: 162px;height: 153px;margin-left: 5px;margin-right: 5px;margin-top:-11px;*/
+    /*border: 1px dimgrey solid;}*/
+._img-parent-new{position: relative;width: 216px;height: 204px;margin-left: 5px;margin-right: 5px;margin-top:-11px;border: 1px dimgrey solid;}
+
+._single ._img-parent-new img{width:100%;height:100%;margin-left: 0;margin-right: 0;margin-top: 0;}
+
 ._goals{width:2px;height:2px;background-color:#ff0404;position:absolute;left: 0;top: 0;border-radius: 2px}
 ._number{text-align:center;font-size: 6pt;position:absolute;color:orange;left:-1px;top:-8px;}

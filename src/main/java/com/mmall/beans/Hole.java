@@ -21,7 +21,8 @@ public class Hole {
     private float py;
     private float mx;
     private float my;
-    private float score;
+//    private float score;
+    private int score;
     private String shootingTime;
 
     public int getId() {
@@ -72,11 +73,19 @@ public class Hole {
         this.my = my;
     }
 
-    public float getScore() {
+//    public float getScore() {
+//        return score;
+//    }
+//
+//    public void setScore(float score) {
+//        this.score = score;
+//    }
+
+    public int getScore() {
         return score;
     }
 
-    public void setScore(float score) {
+    public void setScore(int score) {
         this.score = score;
     }
 

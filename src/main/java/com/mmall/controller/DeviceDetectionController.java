@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.socket.TextMessage;
 
 import javax.annotation.Resource;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.text.ParseException;
 import java.util.List;
 
@@ -63,8 +65,8 @@ public class DeviceDetectionController {
             Target target  =targetService.getTargetByIndex(targetIndex);
 
             String displayMac="";
-            String cameraMac="";
-            String targetMac="";
+            String cameraIP="";
+            String targetIP="";
             if(display!=null)
             {
                 DisplayParam displayParam=new DisplayParam();
@@ -96,20 +98,73 @@ public class DeviceDetectionController {
                 JSONObject data=new JSONObject();
                 traineeJson.put("code",2);//code=0用户的状态数据（未登陆，已登陆．正在射击）,(code=1打靶数据),code=2：代表设备的状态
                 data.put("targetIndex",deviceGroupIndex);
-                data.put("traineeStatus", DisplayStatus.ERROR);
+                data.put("deviceStatus", DisplayStatus.ERROR);
                 data.put("deviceType", DeviceType.DISPLAY);
                 traineeJson.put("data",data);
                 infoHandler().sendMessageToUsers( new TextMessage(traineeJson.toJSONString())) ;
 
             }
             if(camera!=null){
-                cameraMac=camera.getMac();
+                JSONObject traineeJson=new JSONObject();
+                JSONObject data=new JSONObject();
+                traineeJson.put("code",2);//code=0用户的状态数据（未登陆，已登陆．正在射击）,(code=1打靶数据),code=2：代表设备的状态
+                data.put("targetIndex",deviceGroupIndex);
+                data.put("deviceStatus", CameraStatus.ERROR);
+                data.put("deviceType", DeviceType.CARMER);
+                traineeJson.put("data",data);
+                infoHandler().sendMessageToUsers( new TextMessage(traineeJson.toJSONString())) ;
+                cameraIP=camera.getIp();
+                if(checkIpStatus(cameraIP))
+                {
+                    JSONObject traineeJsonnew=new JSONObject();
+                    JSONObject datanew=new JSONObject();
+                    traineeJsonnew.put("code",2);//code=0用户的状态数据（未登陆，已登陆．正在射击）,(code=1打靶数据),code=2：代表设备的状态
+                    datanew.put("targetIndex",deviceGroupIndex);
+                    datanew.put("deviceStatus", CameraStatus.NORMAL);
+                    datanew.put("deviceType", DeviceType.CARMER);
+                    traineeJsonnew.put("data",datanew);
+                    infoHandler().sendMessageToUsers( new TextMessage(traineeJsonnew.toJSONString())) ;
+
+                }
+
+
             }
             if(target!=null){
-                targetMac=target.getMac();
+                JSONObject traineeJson=new JSONObject();
+                JSONObject data=new JSONObject();
+                traineeJson.put("code",2);//code=0用户的状态数据（未登陆，已登陆．正在射击）,(code=1打靶数据),code=2：代表设备的状态
+                data.put("targetIndex",deviceGroupIndex);
+                data.put("deviceStatus", TargetStatus.CONNECT_ERROR);
+                data.put("deviceType", DeviceType.TARGET);
+                traineeJson.put("data",data);
+                infoHandler().sendMessageToUsers( new TextMessage(traineeJson.toJSONString())) ;
+
+                targetIP=target.getIp();
+
+                if(checkIpStatus(targetIP))
+                {
+                    JSONObject traineeJsonnew=new JSONObject();
+                    JSONObject datanew=new JSONObject();
+                    traineeJsonnew.put("code",2);//code=0用户的状态数据（未登陆，已登陆．正在射击）,(code=1打靶数据),code=2：代表设备的状态
+                    datanew.put("targetIndex",deviceGroupIndex);
+                    datanew.put("deviceStatus", TargetStatus.CONNECT_NORMAL);
+                    datanew.put("deviceType", DeviceType.TARGET);
+                    traineeJsonnew.put("data",datanew);
+                    infoHandler().sendMessageToUsers( new TextMessage(traineeJsonnew.toJSONString())) ;
+
+                }
+
             }
         }
 
     }
-
+    public static boolean checkIpStatus(String ipAddress) {
+        boolean reachable = false;
+        try {
+            reachable = InetAddress.getByName(ipAddress).isReachable(100);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return reachable;
+    }
 }

@@ -1,11 +1,9 @@
 package com.mmall.rabbitmq;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.mmall.beans.Hole;
 import com.mmall.beans.MarkData;
-
 import com.mmall.beans.ServerCommand;
 import com.mmall.config.SpringWebSocketHandler;
 import com.mmall.model.*;
@@ -13,8 +11,8 @@ import com.mmall.param.ScoresParam;
 import com.mmall.service.*;
 import com.mmall.util.Circle;
 import com.mmall.util.Point2D;
+import com.mmall.util.Rect;
 import com.rabbitmq.client.Channel;
-import org.hibernate.metamodel.relational.Datatype;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.listener.api.ChannelAwareMessageListener;
@@ -25,11 +23,9 @@ import org.springframework.web.socket.TextMessage;
 import javax.annotation.Resource;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
@@ -51,6 +47,8 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
     private DeviceGroupService deviceGroupService;
     @Resource
     private MessageProducer messageProducer;
+
+    private List<Object> increasedRingNumbersAndOffset=new ArrayList();
     public CameraMarkDataConsumer1(){
     }
     /**
@@ -142,13 +140,7 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
         }
         return s;
     }
-    /**
-     *  计算环数
-     * @param px
-     * @param py
-     * @param r 靶心半径
-     * @return
-     */
+
     private double ringNumber(List<Point2D> vertexList,double r){
 
         double R = Math.hypot(vertexList.get(0).getX(), vertexList.get(0).getY() );//返回平方根
@@ -223,7 +215,9 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
         c.setR(r);//
         Double x1=firstConjunction.getX();
         Double x2=secondConjunction.getX();
+//      判断点在点除去顶弧构成的有效区
         isInPolygon=IsPtInPoly(point, pts);
+        //如果不在点区域内看是否在顶弧区域
         if(!isInPolygon)
         {
             if(point.getX()<=x2&&point.getX()>=x1)
@@ -233,14 +227,32 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
         }
         return (isInArc||isInPolygon);
     }
+
+    private float compute_iou(Rect rect1, Rect rect2){
+        float leftColumnMax = Math.max(rect1.getLx(), rect2.getLx());
+        float rightColumnMin = Math.min(rect1.getRx(),rect2.getRx());
+        float upRowMax = Math.max(rect1.getLy(), rect2.getLy());
+        float downRowMin = Math.min(rect1.getRy(),rect1.getRy());
+
+        if (leftColumnMax>=rightColumnMin || downRowMin<=upRowMax){
+            return 0;
+        }
+
+        float s1 = (rect1.getRx()-rect1.getLx())*(rect1.getRy()-rect1.getLy());
+        float s2 = (rect2.getRx()-rect2.getLx())*(rect2.getRy()-rect2.getLy());
+        float sCross = (downRowMin-upRowMax)*(rightColumnMin-leftColumnMax);
+        return sCross/(s1+s2-sCross);
+    }
+
     @Override
     public void onMessage(Message message, Channel channel) throws Exception {
+        increasedRingNumbersAndOffset.clear();
         int shootingStatus=0;
         try {
             shootingStatus = traineeGroupService.getShootingStatus();
         }catch (Exception e)
         {}
-        if(shootingStatus==0) {//如果当前已经单击了“开始射击”按钮
+        if(shootingStatus==0) {//如果当前已经单击了“开始射击”按钮,表示可以接受camer端返回的数据了
             //识靶终端发回的坐标是以398*396尺寸发挥的，以下为该尺寸靶子的有效直线区域
             List<Point2D> pts = new ArrayList<Point2D>();
             pts.add(new Point2D(0, 396));
@@ -270,6 +282,7 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
                 String messageStr = new String(message.getBody(), "UTF-8");
                 JSONObject messageJson = JSONObject.parseObject(messageStr);
                 String camerMac = messageJson.getString("mac");
+                String imagebase64=messageJson.getString("imagebase64");
                 Double radius = messageJson.getDouble("radius");
                 String mmOfRadius = messageJson.getString("mmOfRadius");
                 JSONArray holes = messageJson.getJSONArray("holes");
@@ -295,12 +308,18 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
                 if (traineeIdsInShooting != null) {
                     String[] traineeIdsArray = traineeIdsInShooting.split(",");
                     int traineeId = Integer.parseInt(traineeIdsArray[deviceGroupIndex - 1].trim());
+
+
                     int scoreCount = scoresService.getCount(traineeId);
                     int scoreCountInJson = holes.size();
-                    if (scoreCountInJson >= scoreCount) {//如果返回的json中有增加的弹孔数据再删除旧的
-                        scoresService.deleteByTraineeId(traineeId);
-                    }
-                    //if(scoreCountInJson>scoreCount){
+
+                    // 新加的，
+                    //if (scoreCountInJson > scoreCount) {//如果返回的json中有增加的弹孔数据再删除旧的
+                    //  scoresService.deleteByTraineeId(traineeId);
+                    //}
+                    //新加的结束
+
+                    //if(scoreCountInJson>scoreCount) {//新加一行代码**************
                     for (int i = 0; i < scoreCountInJson; i++) {
                         JSONObject newScore = holes.getJSONObject(i);
                         Double px = newScore.getJSONObject("center").getDouble("px");//得到识靶终端的px，py，这时数据是以靶心为坐标原点的，所以为了完成各项检
@@ -309,21 +328,30 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
                         //将以靶心为原点的坐标转换为了以左上角为参考点的坐标,
                         Double PX = px + bullEyePoint.getX();
                         Double PY = py + bullEyePoint.getY();
+//                      取得每个弹孔的中心坐标，后面要判断是否处于有效区域
                         Point2D point = new Point2D(PX, PY);
-
-                        List<Point2D> vertexList=new ArrayList<>();
+//                      vertexList存储每个弹孔bbox的四个顶点
+                        List<Point2D> vertexList = new ArrayList<>();
                         JSONArray bbox = newScore.getJSONArray("bbox");
-
-                        for (int j=0;j<bbox.size();j++)
-                        {
-                            JSONObject vertex=bbox.getJSONObject(j);
-                            Double vertex_x=vertex.getDouble("px");
-                            Double vertex_y=vertex.getDouble("py");
-                            Point2D vertex_point=new Point2D(vertex_x,vertex_y);
+                        ScoresParam scoresParam = new ScoresParam();
+//                      bbox的数据是弹孔包围框的顶点（px,py）顺时针列表
+                        for (int j = 0; j < bbox.size(); j++) {
+                            JSONObject vertex = bbox.getJSONObject(j);
+                            Double vertex_x = vertex.getDouble("px");
+                            Double vertex_y = vertex.getDouble("py");
+                            Point2D vertex_point = new Point2D(vertex_x, vertex_y);
                             vertexList.add(vertex_point);
+                            if (j == 0) {//取得左上角坐标准备入库
+                                scoresParam.setLx(vertex.getFloat("px"));
+                                scoresParam.setLy(vertex.getFloat("py"));
+                            }
+                            if (j == 2) {//取得右下角坐标准备入库
+                                scoresParam.setRx(vertex.getFloat("px"));
+                                scoresParam.setRy(vertex.getFloat("py"));
+                            }
                         }
 
-                        ScoresParam scoresParam = new ScoresParam();
+
                         String now = df.format(System.currentTimeMillis());
                         scoresParam.setHittingTime(df.parse(now));
                         scoresParam.setMac(camerMac);
@@ -338,6 +366,8 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
                         scoresParam.setPx(newScore.getJSONObject("center").getFloat("px"));
                         scoresParam.setPy(newScore.getJSONObject("center").getFloat("py"));
                         scoresParam.setRadius(Float.valueOf(String.valueOf(radius)));
+                        scoresParam.setImagebase64(imagebase64);
+//                      vertexList为一个弹孔的四个顶点
                         Double ringNumber = ringNumber(vertexList, radius);//radius应该是39.8,如果不是和前面的数据会有问题
                         if (isInvalidArea(pts, firstConjunction, secondConjunction, centerPoint, r, point))//如果在有效区域内计算环数
                         {
@@ -345,11 +375,43 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
                         } else {
                             scoresParam.setRingnumber(0.0f);
                         }
-                        scoresParam.setScoreIndex(i + 1);
+                        double iou = 0.0;
+                        List<Scores> scoresListold = scoresService.getScoresByTraineeId(traineeId);
+                        //n为库中已有的数据量
+                        int n = scoresListold.size();
+                        float LX = scoresParam.getLx();
+                        float LY = scoresParam.getLy();
+                        float RX = scoresParam.getRx();
+                        float RY = scoresParam.getRy();
+                        Rect rectnew = new Rect();
+                        rectnew.setLx(LX);
+                        rectnew.setLy(LY);
+                        rectnew.setRx(RX);
+                        rectnew.setRy(RY);
+                        for (int m = 0; m < n; m++) {
+                            Scores scores = scoresListold.get(m);
+                            float lx = scores.getLx();
+                            float ly = scores.getLy();
+                            float rx = scores.getRx();
+                            float ry = scores.getRy();
+                            Rect rectold = new Rect();
+                            rectold.setLx(lx);
+                            rectold.setLy(ly);
+                            rectold.setRx(rx);
+                            rectold.setRy(ry);
+                            float IOU = compute_iou(rectnew, rectold);
+                            if (IOU > iou) {
+                                iou = IOU;
+                            }
+                        }
+                        scoresParam.setScoreIndex(n + 1);
                         scoresParam.setTraineeId(traineeId);
-                        scoresService.save(scoresParam);
+                        if (iou < 0.02) {
+                            scoresService.save(scoresParam);
+                            increasedRingNumbersAndOffset.add((int)(Double.parseDouble(scoresParam.getRingnumber()+"")));
+                            increasedRingNumbersAndOffset.add(offset);
 
-
+                        }
                     }//将最近收到的数据保存完毕，下面统一取出，装配发送给display和server的数据
                     List<Scores> scoresList = scoresService.getScoresByTraineeId(traineeId);
                     Float totalScore = getTotalScore(scoresList);
@@ -368,7 +430,10 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
                             hole.setOffset(scores1.getOffset());
                             hole.setPx(scores1.getPx());
                             hole.setPy(scores1.getPy());
-                            hole.setScore(scores1.getRingnumber());
+                            // 以前取环数是带小数点的，现在取整数
+//                          hole.setScore(scores1.getRingnumber());
+                            hole.setScore((int)Double.parseDouble(scores1.getRingnumber()+""));
+
                             hole.setShootingTime(df.format(scores1.getHittingTime()));
                             //TODO应该只取一次取到即可，但这里取了多次,
                             mac = scores1.getMac();
@@ -383,28 +448,36 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
                     markData.setDeviceGroupIndex(deviceGroupIndex);
                     markData.setRadius(radius1);
                     markData.setMmOfRadius(mmOfRadius1);
+                    markData.setIncreasedRingNumbersAndOffset(increasedRingNumbersAndOffset);
                     markData.setCode(1);//告诉ｓｅｒｖｅｒ现在打靶成绩的显示
                     markData.setDataType(ServerCommand.MARK_DATA);
                     JSONObject jo = (JSONObject) JSONObject.toJSON(markData);
                     String markDataStr = jo.toJSONString();
                     System.out.print(markDataStr);
-                    //messageProducer.sendTopicMessage("server-to-other-exchange","server-to-display-markdata-routing-key-"+displayMac,markDataStr );
-                    messageProducer.sendTopicMessage("server-to-display-exchange", "server-to-display-routing-key-" + displayMac, markDataStr);
-
-                    long delieverTag = message.getMessageProperties().getDeliveryTag();
-                    channel.basicAck(delieverTag, false);//TODO:应该为false
-
-                    //向server发送新的射击websocket消息
-                    infoHandler().sendMessageToUsers(new TextMessage(markDataStr));
-
-
+                    if(increasedRingNumbersAndOffset.size()>0) {
+                        //messageProducer.sendTopicMessage("server-to-other-exchange","server-to-display-markdata-routing-key-"+displayMac,markDataStr );
+                        messageProducer.sendTopicMessage("server-to-display-exchange", "server-to-display-routing-key-" + displayMac, markDataStr);
+//                        long delieverTag = message.getMessageProperties().getDeliveryTag();
+//                        channel.basicAck(delieverTag, false);//TODO:应该为false
+                        //向server发送新的射击websocket消息
+                        infoHandler().sendMessageToUsers(new TextMessage(markDataStr));
+                    }
+//                    long delieverTag = message.getMessageProperties().getDeliveryTag();
+//                    channel.basicAck(delieverTag, false);//TODO:应该为false
                 }
+
+                //}
                 System.out.print("tag========" + message.getMessageProperties().getDeliveryTag());
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
+            }finally{
+//                long delieverTag = message.getMessageProperties().getDeliveryTag();
+//                channel.basicAck(delieverTag, false);//TODO:应该为false
             }
         }
+        long delieverTag = message.getMessageProperties().getDeliveryTag();
+        channel.basicAck(delieverTag, false);//TODO:应该为false
     }
 
  /*   @Override
@@ -418,17 +491,18 @@ public class CameraMarkDataConsumer1 implements ChannelAwareMessageListener {
         }
     }*/
 
+    //以前计算总成绩为计算小数点，现在只取整数
     public float getTotalScore(List<Scores> scoresList) {
 
-        float totalScore=0.0f;
+//        float totalScore=0.0f;
+        int totalScore=0;
         // 去掉重复的key
         for (Scores scores : scoresList) {
-            totalScore=totalScore+scores.getRingnumber();
+            totalScore=totalScore+(int)Double.parseDouble(scores.getRingnumber()+"");
         }
-        NumberFormat nf=new DecimalFormat( "0.0 ");
-        totalScore = (float) Double.parseDouble(nf.format(totalScore));
+        //NumberFormat nf=new DecimalFormat( "0.0 ");
+        //totalScore = (float) Double.parseDouble(nf.format(totalScore));
         return totalScore;
     }
-
 
 }

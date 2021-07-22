@@ -18,21 +18,21 @@
          队列名	是否持久化	是否是排他队列	不使用的时候是否删除	-->
 
 
-    <rabbit:queue name="camera-to-server-markdataqueue" auto-delete="true" durable="true" exclusive="false" auto-declare="true"/>
+    <rabbit:queue name="camera-to-server-markdataqueue" auto-delete="true" durable="false" exclusive="false" auto-declare="true"/>
 
-    <rabbit:queue name="display-to-server-queue" auto-delete="true" durable="true" exclusive="false" auto-declare="true"/>
+    <rabbit:queue name="display-to-server-queue" auto-delete="true" durable="false" exclusive="false" auto-declare="true"/>
 
-    <rabbit:direct-exchange name="camera-to-server-exchange" durable="true" auto-delete="true">
+    <rabbit:topic-exchange name="camera-to-server-exchange" durable="false" auto-delete="true">
         <rabbit:bindings>
-            <rabbit:binding key="camera-to-server-markdata" queue="camera-to-server-markdataqueue"></rabbit:binding>
+            <rabbit:binding pattern="camera-to-server-markdata" queue="camera-to-server-markdataqueue"></rabbit:binding>
         </rabbit:bindings>
-    </rabbit:direct-exchange>
+    </rabbit:topic-exchange>
 
-    <rabbit:direct-exchange name="display-to-server-exchange" durable="true" auto-delete="true">
+    <rabbit:topic-exchange name="display-to-server-exchange" durable="false" auto-delete="true">
     <rabbit:bindings>
-    <rabbit:binding key="display-to-server-routing-key" queue="display-to-server-queue"></rabbit:binding>
+    <rabbit:binding pattern="display-to-server-routing-key" queue="display-to-server-queue"></rabbit:binding>
     </rabbit:bindings>
-    </rabbit:direct-exchange>
+    </rabbit:topic-exchange>
 
 
     <!-- 定义消费者,消费消息 -->
@@ -40,11 +40,10 @@
     <bean id="cameraMarkDataConsumer" class="com.mmall.rabbitmq.CameraMarkDataConsumer"></bean>
     <bean id="displayDataConsumer" class="com.mmall.rabbitmq.DisplayDataConsumer" ></bean>
     <!--开启监听,也可以理解为:
-        将消费者与队列进行绑定,这样就会在,当队列有消息的时候,会由绑定的消费者来进行消费,
-        也可以算是指定消费者来监听指定的队列.当有消息到达的时候,通知消费者进行消费 -->
-    <rabbit:listener-container connection-factory="connectionFactory" acknowledge="manual">
+        concurrency设置的是对每个listener在初始化的时候设置的并发消费者的个数，prefetch是每次从一次性从broker里面取的待消费的消息的个数-->
+    <rabbit:listener-container connection-factory="connectionFactory" acknowledge="manual" concurrency="10" prefetch="10">
         <!-- 注入bean,指定队列 -->
-        <rabbit:listener ref="cameraMarkDataConsumer" queues="camera-to-server-markdataqueue"/>
-        <rabbit:listener ref="displayDataConsumer" queues="display-to-server-queue"/>
+        <rabbit:listener ref="cameraMarkDataConsumer" queues="camera-to-server-markdataqueue" exclusive="false"/>
+        <rabbit:listener ref="displayDataConsumer" queues="display-to-server-queue" exclusive="false"/>
     </rabbit:listener-container>
 </beans>

@@ -14,6 +14,8 @@ public class Scores {
 
     private Integer scoreIndex;
 
+    private Integer trainingId;
+
     private Integer traineeId;
 
     private Date hittingTime;
@@ -35,14 +37,17 @@ public class Scores {
     private Float ry;
 
     private String offset;
-
-    private Float ringnumber;
+//    员环数计算小数点
+//    private Float ringnumber;
+    private int ringnumber;
 
     private String mac;
 
     private Float radius;
 
     private Float mmofradius;
+
+    private String image;
 
     public Integer getId() {
         return id;
@@ -116,11 +121,11 @@ public class Scores {
         this.offset = offset == null ? null : offset.trim();
     }
 
-    public Float getRingnumber() {
+    public int getRingnumber() {
         return ringnumber;
     }
 
-    public void setRingnumber(Float ringnumber) {
+    public void setRingnumber(int ringnumber) {
         this.ringnumber = ringnumber;
     }
 
@@ -178,5 +183,21 @@ public class Scores {
 
     public void setRy(Float ry) {
         this.ry = ry;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
+    public Integer getTrainingId() {
+        return trainingId;
+    }
+
+    public void setTrainingId(Integer trainingId) {
+        this.trainingId = trainingId;
     }
 }

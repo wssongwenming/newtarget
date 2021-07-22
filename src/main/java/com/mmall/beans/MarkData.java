@@ -36,8 +36,11 @@ public class MarkData {
     private String radius;
     private String mmOfRadius;
     private List<Hole> holes;
+
+    private List increasedRingNumbersAndOffset;//告诉app端新增加的环数和方向偏移用于声音播放
     //deviceGroupIndex,在display显示中并没有用到，而是特意添加为server显示中定位靶位用到的
     private int deviceGroupIndex;
+
 
     //主要用于在向server输送用于显示成绩表格中的数据
     private List<Scores> shootingScoreList;
@@ -114,5 +117,13 @@ public class MarkData {
 
     public void setDataType(int dataType) {
         this.dataType = dataType;
+    }
+
+    public List getIncreasedRingNumbersAndOffset() {
+        return increasedRingNumbersAndOffset;
+    }
+
+    public void setIncreasedRingNumbersAndOffset(List increasedRingNumbersAndOffset) {
+        this.increasedRingNumbersAndOffset = increasedRingNumbersAndOffset;
     }
 }

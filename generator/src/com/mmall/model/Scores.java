@@ -29,6 +29,18 @@ public class Scores {
 
     private Float mmofradius;
 
+    private Float lx;
+
+    private Float ly;
+
+    private Float rx;
+
+    private Float ry;
+
+    private Integer trainingId;
+
+    private String image;
+
     public Integer getId() {
         return id;
     }
@@ -131,5 +143,53 @@ public class Scores {
 
     public void setMmofradius(Float mmofradius) {
         this.mmofradius = mmofradius;
+    }
+
+    public Float getLx() {
+        return lx;
+    }
+
+    public void setLx(Float lx) {
+        this.lx = lx;
+    }
+
+    public Float getLy() {
+        return ly;
+    }
+
+    public void setLy(Float ly) {
+        this.ly = ly;
+    }
+
+    public Float getRx() {
+        return rx;
+    }
+
+    public void setRx(Float rx) {
+        this.rx = rx;
+    }
+
+    public Float getRy() {
+        return ry;
+    }
+
+    public void setRy(Float ry) {
+        this.ry = ry;
+    }
+
+    public Integer getTrainingId() {
+        return trainingId;
+    }
+
+    public void setTrainingId(Integer trainingId) {
+        this.trainingId = trainingId;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image == null ? null : image.trim();
     }
 }

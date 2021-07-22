@@ -34,8 +34,9 @@ public class ScoresService {
         BeanValidator.check(param);
         Scores scores = Scores.builder().hittingTime(param.getHittingTime()).mac(param.getMac()).mmofradius(param.getMmofradius())
                 .mx(param.getMx()).my(param.getMy()).offset(param.getOffset()).px(param.getPx()).py(param.getPy()).lx(param.getLx()).ly(param.getLy()).rx(param.getRx()).ry(param.getRy())
-                .radius(param.getRadius()).ringnumber(param.getRingnumber()).scoreIndex(param.getScoreIndex()).traineeId(param.getTraineeId())
-                .traineeId(param.getTraineeId()).build();
+//                .radius(param.getRadius()).ringnumber(param.getRingnumber()).scoreIndex(param.getScoreIndex()).traineeId(param.getTraineeId())
+                .radius(param.getRadius()).ringnumber((int)(Double.parseDouble(param.getRingnumber()+""))).scoreIndex(param.getScoreIndex()).traineeId(param.getTraineeId())
+                .image(param.getImagebase64()).traineeId(param.getTraineeId()).build();
         scoresMapper.insertSelective(scores);
     }
 

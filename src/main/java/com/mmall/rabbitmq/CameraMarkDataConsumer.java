@@ -48,6 +48,8 @@ public class CameraMarkDataConsumer implements ChannelAwareMessageListener {
     private DeviceGroupService deviceGroupService;
     @Resource
     private MessageProducer messageProducer;
+
+    private List<Object> increasedRingNumbersAndOffset=new ArrayList();
     public CameraMarkDataConsumer(){
     }
     /**
@@ -143,6 +145,7 @@ public class CameraMarkDataConsumer implements ChannelAwareMessageListener {
     private double ringNumber(List<Point2D> vertexList,double r){
 
         double R = Math.hypot(vertexList.get(0).getX(), vertexList.get(0).getY() );//返回平方根
+//      以弹孔的bbox的四个顶点分别计算其和靶心的距离，以最小的一个计算环数
         for (int i=0;i<vertexList.size();i++)
         {
             double RR = Math.hypot(vertexList.get(i).getX(), vertexList.get(i).getY() );//返回平方根
@@ -245,34 +248,37 @@ public class CameraMarkDataConsumer implements ChannelAwareMessageListener {
 
     @Override
     public void onMessage(Message message, Channel channel) throws Exception {
+        increasedRingNumbersAndOffset.clear();
         int shootingStatus=0;
         try {
             shootingStatus = traineeGroupService.getShootingStatus();
         }catch (Exception e)
         {}
-        if(shootingStatus==0) {//如果当前已经单击了“开始射击”按钮
+        if(shootingStatus==0) {//如果当前已经单击了“开始射击”按钮,表示可以接受camer端返回的数据了
             //识靶终端发回的坐标是以398*396尺寸发挥的，以下为该尺寸靶子的有效直线区域
             List<Point2D> pts = new ArrayList<Point2D>();
-            pts.add(new Point2D(0, 396));
-            pts.add(new Point2D(0, 205.92));
-            pts.add(new Point2D(110.32, 142.56));
-            pts.add(new Point2D(107.46, 102.96));
-            pts.add(new Point2D(119.4, 23.76));
-            pts.add(new Point2D(278.6, 23.76));
-            pts.add(new Point2D(290.54, 102.96));
-            pts.add(new Point2D(287.67, 142.56));
-            pts.add(new Point2D(398, 205.92));
-            pts.add(new Point2D(398, 396));
+            pts.add(new Point2D(20, 505));
+            pts.add(new Point2D(20, 264));
+            pts.add(new Point2D(159, 184));
+            pts.add(new Point2D(154, 135));
+            pts.add(new Point2D(169, 34));
+            pts.add(new Point2D(372, 34));
+            pts.add(new Point2D(387, 135));
+            pts.add(new Point2D(382, 184));
+            pts.add(new Point2D(520, 264));
+            pts.add(new Point2D(520, 505));
 
             //两个交叉点
-            Point2D firstConjunction = new Point2D(119.4, 23.76);
-            Point2D secondConjunction = new Point2D(278.6, 23.76);
+            Point2D firstConjunction = new Point2D(169, 34);
+            Point2D secondConjunction = new Point2D(372, 34);
             //靶顶圆弧圆心
-            Point2D centerPoint = new Point2D(199, 142.56);
+            Point2D centerPoint = new Point2D(270, 185);
             //顶部圆弧的半径
-            Double r = 142.56;
+            Double r = 180.0;
+
             //靶心的坐标，用于变换坐标，将以靶心为坐标原点的坐标变成以左上角为坐标原点的坐标
-            Point2D bullEyePoint = new Point2D(199, 236.8);
+            Point2D bullEyePoint = new Point2D(270, 305);
+
             SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             // 数据是从camera过来的，需要从数据中提取出mac->找到设备编号->靶位编组编号-〉靶位编组中的display的MAC-〉
             // 同时提取射击组中对应的traineeid，把成绩归到该人名下
@@ -280,6 +286,7 @@ public class CameraMarkDataConsumer implements ChannelAwareMessageListener {
                 String messageStr = new String(message.getBody(), "UTF-8");
                 JSONObject messageJson = JSONObject.parseObject(messageStr);
                 String camerMac = messageJson.getString("mac");
+                String imagebase64=messageJson.getString("imagebase64");
                 Double radius = messageJson.getDouble("radius");
                 String mmOfRadius = messageJson.getString("mmOfRadius");
                 JSONArray holes = messageJson.getJSONArray("holes");
@@ -312,153 +319,183 @@ public class CameraMarkDataConsumer implements ChannelAwareMessageListener {
 
                     // 新加的，
                     //if (scoreCountInJson > scoreCount) {//如果返回的json中有增加的弹孔数据再删除旧的
-                      //  scoresService.deleteByTraineeId(traineeId);
+                    //  scoresService.deleteByTraineeId(traineeId);
                     //}
                     //新加的结束
 
                     //if(scoreCountInJson>scoreCount) {//新加一行代码**************
-                        for (int i = 0; i < scoreCountInJson; i++) {
-                            JSONObject newScore = holes.getJSONObject(i);
-                            Double px = newScore.getJSONObject("center").getDouble("px");//得到识靶终端的px，py，这时数据是以靶心为坐标原点的，所以为了完成各项检
-                            // 测需要转换为屏幕坐标，以左上角为坐标原点
-                            Double py = newScore.getJSONObject("center").getDouble("py");
-                            //将以靶心为原点的坐标转换为了以左上角为参考点的坐标,
-                            Double PX = px + bullEyePoint.getX();
-                            Double PY = py + bullEyePoint.getY();
-                            Point2D point = new Point2D(PX, PY);
-
-                            List<Point2D> vertexList = new ArrayList<>();
-                            JSONArray bbox = newScore.getJSONArray("bbox");
-                            ScoresParam scoresParam = new ScoresParam();
-                            for (int j = 0; j < bbox.size(); j++) {
-                                JSONObject vertex = bbox.getJSONObject(j);
-                                Double vertex_x = vertex.getDouble("px");
-                                Double vertex_y = vertex.getDouble("py");
-                                Point2D vertex_point = new Point2D(vertex_x, vertex_y);
-                                vertexList.add(vertex_point);
-                                if (j == 0) {//取得左上角坐标准备入库
-                                    scoresParam.setLx(vertex.getFloat("px"));
-                                    scoresParam.setLy(vertex.getFloat("py"));
-                                }
-                                if (j == 2) {//取得右下角坐标准备入库
-                                    scoresParam.setRx(vertex.getFloat("px"));
-                                    scoresParam.setRy(vertex.getFloat("py"));
-                                }
-                            }
-
-
-                            String now = df.format(System.currentTimeMillis());
-                            scoresParam.setHittingTime(df.parse(now));
-                            scoresParam.setMac(camerMac);
-                            scoresParam.setMmofradius(0.0f);
-                            //scoresParam.setMx(newScore.getFloat("mx"));
-                            scoresParam.setMx(0.0f);//原数据没有传过来，该项，所以暂时设置为0
-                            //scoresParam.setMy(newScore.getFloat("my"));
-                            scoresParam.setMy(0.0f);//
-                            String offset = getOffset(px, py);//px,py现在还是
-                            scoresParam.setOffset(offset);
-                            //px,py类型float和double不匹配，再取一遍
-                            scoresParam.setPx(newScore.getJSONObject("center").getFloat("px"));
-                            scoresParam.setPy(newScore.getJSONObject("center").getFloat("py"));
-                            scoresParam.setRadius(Float.valueOf(String.valueOf(radius)));
-                            Double ringNumber = ringNumber(vertexList, radius);//radius应该是39.8,如果不是和前面的数据会有问题
-                            if (isInvalidArea(pts, firstConjunction, secondConjunction, centerPoint, r, point))//如果在有效区域内计算环数
-                            {
-                                scoresParam.setRingnumber(Float.valueOf(String.valueOf(ringNumber)));
-                            } else {
-                                scoresParam.setRingnumber(0.0f);
-                            }
-                            double iou = 0.0;
-                            List<Scores> scoresListold = scoresService.getScoresByTraineeId(traineeId);
-                            //n为库中已有的数据量
-                            int n = scoresListold.size();
-                            float LX = scoresParam.getLx();
-                            float LY = scoresParam.getLy();
-                            float RX = scoresParam.getRx();
-                            float RY = scoresParam.getRy();
-                            Rect rectnew = new Rect();
-                            rectnew.setLx(LX);
-                            rectnew.setLy(LY);
-                            rectnew.setRx(RX);
-                            rectnew.setRy(RY);
-                            for (int m = 0; m < n; m++) {
-                                Scores scores = scoresListold.get(m);
-                                float lx = scores.getLx();
-                                float ly = scores.getLy();
-                                float rx = scores.getRx();
-                                float ry = scores.getRy();
-                                Rect rectold = new Rect();
-                                rectold.setLx(lx);
-                                rectold.setLy(ly);
-                                rectold.setRx(rx);
-                                rectold.setRy(ry);
-                                float IOU = compute_iou(rectnew, rectold);
-                                if (IOU > iou) {
-                                    iou = IOU;
-                                }
-                            }
-                            scoresParam.setScoreIndex(n + 1);
-                            scoresParam.setTraineeId(traineeId);
-                            if (iou < 0.05) {
-                                scoresService.save(scoresParam);
-                            }
-
-
-                        }//将最近收到的数据保存完毕，下面统一取出，装配发送给display和server的数据
-                        List<Scores> scoresList = scoresService.getScoresByTraineeId(traineeId);
-                        Float totalScore = getTotalScore(scoresList);
-                        MarkData markData = new MarkData();
-                        String mac = "";//没有用到其实
-                        String radius1 = "";
-                        String mmOfRadius1 = "";
-                        List<Hole> holes1 = new ArrayList<>();
-                        for (int i = 0; i < scoresList.size(); i++) {
-                            Scores scores1 = scoresList.get(i);
-                            Hole hole = new Hole();
-                            if (scores1 != null) {
-                                hole.setId(scores1.getScoreIndex());
-                                hole.setMx(scores1.getMx());
-                                hole.setMy(scores1.getMy());
-                                hole.setOffset(scores1.getOffset());
-                                hole.setPx(scores1.getPx());
-                                hole.setPy(scores1.getPy());
-                                hole.setScore(scores1.getRingnumber());
-                                hole.setShootingTime(df.format(scores1.getHittingTime()));
-                                //TODO应该只取一次取到即可，但这里取了多次,
-                                mac = scores1.getMac();
-                                radius1 = String.valueOf(scores1.getRadius());
-                                mmOfRadius1 = String.valueOf(scores1.getMmofradius());
-                            }
-                            holes1.add(hole);
+                    for (int i = 0; i < scoreCountInJson; i++) {
+                        JSONObject newScore = holes.getJSONObject(i);
+                        Double px = newScore.getJSONObject("center").getDouble("px");//得到识靶终端的px，py，这时数据是以靶心为坐标原点的，所以为了完成各项检
+                        // 测需要转换为屏幕坐标，以左上角为坐标原点
+                        Double py = newScore.getJSONObject("center").getDouble("py");
+                     // 在模型端把宽和高一起放进了center里穿过俩
+                        Double bbox_width=newScore.getJSONObject("center").getDouble("width");
+                        Double bbox_height=newScore.getJSONObject("center").getDouble("height");
+                        //将以靶心为原点的坐标转换为了以左上角为参考点的坐标,
+                        Double PX=0.0;
+                        Double PY=0.0;
+                        if (px>=0) {
+                            PX = px + bullEyePoint.getX()-(double)bbox_width/2;
+                        }else {
+                            PX = px + bullEyePoint.getX()+(double)bbox_width/2;
                         }
-                        markData.setHoles(holes1);//App端用于显示，server端也使用
-                        markData.setTotalScore(totalScore);//server端用于显示成绩列表中的总成绩
-                        markData.setMac(mac);
-                        markData.setDeviceGroupIndex(deviceGroupIndex);
-                        markData.setRadius(radius1);
-                        markData.setMmOfRadius(mmOfRadius1);
-                        markData.setCode(1);//告诉ｓｅｒｖｅｒ现在打靶成绩的显示
-                        markData.setDataType(ServerCommand.MARK_DATA);
-                        JSONObject jo = (JSONObject) JSONObject.toJSON(markData);
-                        String markDataStr = jo.toJSONString();
-                        System.out.print(markDataStr);
+                        if(py>=0){
+                            PY = py + bullEyePoint.getY()-(double)bbox_height/2;
+                        }else{
+                            PY = py + bullEyePoint.getY()+(double)bbox_height/2;
+                        }
+
+//                      取得每个弹孔的贴近靶心一侧的坐标，后面要判断是否处于有效区域
+                        Point2D point = new Point2D(PX, PY);
+//                      vertexList存储每个弹孔bbox的四个顶点
+                        List<Point2D> vertexList = new ArrayList<>();
+                        JSONArray bbox = newScore.getJSONArray("bbox");
+                        ScoresParam scoresParam = new ScoresParam();
+//                      bbox的数据是弹孔包围框的顶点（px,py）顺时针列表
+                        for (int j = 0; j < bbox.size(); j++) {
+                            JSONObject vertex = bbox.getJSONObject(j);
+                            Double vertex_x = vertex.getDouble("px");
+                            Double vertex_y = vertex.getDouble("py");
+                            Point2D vertex_point = new Point2D(vertex_x, vertex_y);
+                            vertexList.add(vertex_point);
+                            if (j == 0) {//取得左上角坐标准备入库
+                                scoresParam.setLx(vertex.getFloat("px"));
+                                scoresParam.setLy(vertex.getFloat("py"));
+                            }
+                            if (j == 2) {//取得右下角坐标准备入库
+                                scoresParam.setRx(vertex.getFloat("px"));
+                                scoresParam.setRy(vertex.getFloat("py"));
+                            }
+                        }
+
+
+                        String now = df.format(System.currentTimeMillis());
+                        scoresParam.setHittingTime(df.parse(now));
+                        scoresParam.setMac(camerMac);
+                        scoresParam.setMmofradius(0.0f);
+                        //scoresParam.setMx(newScore.getFloat("mx"));
+                        scoresParam.setMx(0.0f);//原数据没有传过来，该项，所以暂时设置为0
+                        //scoresParam.setMy(newScore.getFloat("my"));
+                        scoresParam.setMy(0.0f);//
+                        String offset = getOffset(px, py);//px,py现在还是
+                        scoresParam.setOffset(offset);
+                        //px,py类型float和double不匹配，再取一遍，这时存储的中心点坐标是以靶心为参考点的
+                        scoresParam.setPx(newScore.getJSONObject("center").getFloat("px"));
+                        scoresParam.setPy(newScore.getJSONObject("center").getFloat("py"));
+                        scoresParam.setRadius(Float.valueOf(String.valueOf(radius)));
+                        scoresParam.setImagebase64(imagebase64);
+//                      vertexList为一个弹孔的四个顶点
+                        Double ringNumber = ringNumber(vertexList, radius);//radius应该是39.8,如果不是和前面的数据会有问题
+                        if (isInvalidArea(pts, firstConjunction, secondConjunction, centerPoint, r, point))//如果在有效区域内计算环数
+                        {
+                            scoresParam.setRingnumber(Float.valueOf(String.valueOf(ringNumber)));
+                        } else {
+                            scoresParam.setRingnumber(0.0f);
+                        }
+                        double iou = 0.0;
+                        List<Scores> scoresListold = scoresService.getScoresByTraineeId(traineeId);
+                        //n为库中已有的数据量
+                        int n = scoresListold.size();
+                        float LX = scoresParam.getLx();
+                        float LY = scoresParam.getLy();
+                        float RX = scoresParam.getRx();
+                        float RY = scoresParam.getRy();
+                        Rect rectnew = new Rect();
+                        rectnew.setLx(LX);
+                        rectnew.setLy(LY);
+                        rectnew.setRx(RX);
+                        rectnew.setRy(RY);
+                        for (int m = 0; m < n; m++) {
+                            Scores scores = scoresListold.get(m);
+                            float lx = scores.getLx();
+                            float ly = scores.getLy();
+                            float rx = scores.getRx();
+                            float ry = scores.getRy();
+                            Rect rectold = new Rect();
+                            rectold.setLx(lx);
+                            rectold.setLy(ly);
+                            rectold.setRx(rx);
+                            rectold.setRy(ry);
+                            float IOU = compute_iou(rectnew, rectold);
+                            if (IOU > iou) {
+                                iou = IOU;
+                            }
+                        }
+                        scoresParam.setScoreIndex(n + 1);
+                        scoresParam.setTraineeId(traineeId);
+                        if (iou < 0.02) {
+                            scoresService.save(scoresParam);
+                            increasedRingNumbersAndOffset.add((int)(Double.parseDouble(scoresParam.getRingnumber()+"")));
+                            increasedRingNumbersAndOffset.add(offset);
+
+                        }
+                    }//将最近收到的数据保存完毕，下面统一取出，装配发送给display和server的数据
+                    List<Scores> scoresList = scoresService.getScoresByTraineeId(traineeId);
+                    Float totalScore = getTotalScore(scoresList);
+                    MarkData markData = new MarkData();
+                    String mac = "";//没有用到其实
+                    String radius1 = "";
+                    String mmOfRadius1 = "";
+                    List<Hole> holes1 = new ArrayList<>();
+                    for (int i = 0; i < scoresList.size(); i++) {
+                        Scores scores1 = scoresList.get(i);
+                        Hole hole = new Hole();
+                        if (scores1 != null) {
+                            hole.setId(scores1.getScoreIndex());
+                            hole.setMx(scores1.getMx());
+                            hole.setMy(scores1.getMy());
+                            hole.setOffset(scores1.getOffset());
+                            hole.setPx(scores1.getPx());
+                            hole.setPy(scores1.getPy());
+                            // 以前取环数是带小数点的，现在取整数
+//                          hole.setScore(scores1.getRingnumber());
+                            hole.setScore((int)Double.parseDouble(scores1.getRingnumber()+""));
+
+                            hole.setShootingTime(df.format(scores1.getHittingTime()));
+                            //TODO应该只取一次取到即可，但这里取了多次,
+                            mac = scores1.getMac();
+                            radius1 = String.valueOf(scores1.getRadius());
+                            mmOfRadius1 = String.valueOf(scores1.getMmofradius());
+                        }
+                        holes1.add(hole);
+                    }
+                    markData.setHoles(holes1);//App端用于显示，server端也使用
+                    markData.setTotalScore(totalScore);//server端用于显示成绩列表中的总成绩
+                    markData.setMac(mac);
+                    markData.setDeviceGroupIndex(deviceGroupIndex);
+                    markData.setRadius(radius1);
+                    markData.setMmOfRadius(mmOfRadius1);
+                    markData.setIncreasedRingNumbersAndOffset(increasedRingNumbersAndOffset);
+                    markData.setCode(1);//告诉ｓｅｒｖｅｒ现在打靶成绩的显示
+                    markData.setDataType(ServerCommand.MARK_DATA);
+                    JSONObject jo = (JSONObject) JSONObject.toJSON(markData);
+                    String markDataStr = jo.toJSONString();
+                    System.out.print(markDataStr);
+                    if(increasedRingNumbersAndOffset.size()>0) {
                         //messageProducer.sendTopicMessage("server-to-other-exchange","server-to-display-markdata-routing-key-"+displayMac,markDataStr );
                         messageProducer.sendTopicMessage("server-to-display-exchange", "server-to-display-routing-key-" + displayMac, markDataStr);
-
-                        long delieverTag = message.getMessageProperties().getDeliveryTag();
-                        channel.basicAck(delieverTag, false);//TODO:应该为false
-
+//                        long delieverTag = message.getMessageProperties().getDeliveryTag();
+//                        channel.basicAck(delieverTag, false);//TODO:应该为false
                         //向server发送新的射击websocket消息
                         infoHandler().sendMessageToUsers(new TextMessage(markDataStr));
                     }
+//                    long delieverTag = message.getMessageProperties().getDeliveryTag();
+//                    channel.basicAck(delieverTag, false);//TODO:应该为false
+                }
 
                 //}
                 System.out.print("tag========" + message.getMessageProperties().getDeliveryTag());
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
+            }finally{
+//                long delieverTag = message.getMessageProperties().getDeliveryTag();
+//                channel.basicAck(delieverTag, false);//TODO:应该为false
             }
         }
+        long delieverTag = message.getMessageProperties().getDeliveryTag();
+        channel.basicAck(delieverTag, false);//TODO:应该为false
     }
 
  /*   @Override
@@ -472,15 +509,17 @@ public class CameraMarkDataConsumer implements ChannelAwareMessageListener {
         }
     }*/
 
+    //以前计算总成绩为计算小数点，现在只取整数
     public float getTotalScore(List<Scores> scoresList) {
 
-        float totalScore=0.0f;
+//        float totalScore=0.0f;
+        int totalScore=0;
         // 去掉重复的key
         for (Scores scores : scoresList) {
-            totalScore=totalScore+scores.getRingnumber();
+            totalScore=totalScore+(int)Double.parseDouble(scores.getRingnumber()+"");
         }
-        NumberFormat nf=new DecimalFormat( "0.0 ");
-        totalScore = (float) Double.parseDouble(nf.format(totalScore));
+        //NumberFormat nf=new DecimalFormat( "0.0 ");
+        //totalScore = (float) Double.parseDouble(nf.format(totalScore));
         return totalScore;
     }
 

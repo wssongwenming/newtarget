@@ -13,5 +13,7 @@ public interface ScoresMapper {
 
     int updateByPrimaryKeySelective(Scores record);
 
+    int updateByPrimaryKeyWithBLOBs(Scores record);
+
     int updateByPrimaryKey(Scores record);
 }

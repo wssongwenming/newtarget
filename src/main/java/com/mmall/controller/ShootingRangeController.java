@@ -23,15 +23,38 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.socket.TextMessage;
 
 import javax.annotation.Resource;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import static java.lang.Thread.currentThread;
 
 @SuppressWarnings("ALL")
 @Controller
 @RequestMapping("/sys/shootingrange")
 @Slf4j
 public class ShootingRangeController {
+    Map<String, Client> clientMap = new HashMap<String, Client>();
+//    Client client=null;
+    List<Client> clientList=new ArrayList<>();
+    int port=5000;
+    public ShootingRangeController() {
+//        try {
+//            client=ClientFactory.createClient("192.168.1.123",5000);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+////                    client.stop();
+////
+//        }
+    }
+
     @Bean//这个注解会从Spring容器拿出Bean
     public SpringWebSocketHandler infoHandler() {
 
@@ -139,9 +162,10 @@ public class ShootingRangeController {
                     int traineeStatus = trainee.getStatus();
                     String photo = trainee.getPhoto();
                     List<Scores> scoresList = scoresService.getScoresByTraineeId(traineeId);
-                    Float totalScore = 0.0f;
+//                    Float totalScore = 0.0f;
+                    int totalScore=0;
                     for (int m = 0; m < scoresList.size(); m++) {
-                        totalScore = totalScore + scoresList.get(m).getRingnumber();
+                        totalScore = totalScore + (int)(Double.parseDouble(scoresList.get(m).getRingnumber()+""));
                     }
                     traineeShooting_deviceGroup_data.setName(name);
                     traineeShooting_deviceGroup_data.setTraineeStatus(traineeStatus);
@@ -385,9 +409,12 @@ public class ShootingRangeController {
                     int traineeStatus = trainee.getStatus();
                     String photo = trainee.getPhoto();
                     List<Scores> scoresList = scoresService.getScoresByTraineeId(traineeId);
-                    Float totalScore = 0.0f;
+//                  Float totalScore = 0.0f;
+                    int totalScore=0;
                     for (int j = 0; j < scoresList.size(); j++) {
-                        totalScore = totalScore + scoresList.get(j).getRingnumber();
+//                      totalScore = totalScore + scoresList.get(j).getRingnumber();//原来是要计算小数点的
+
+                        totalScore = totalScore + (int)(Double.parseDouble(scoresList.get(m).getRingnumber()+""));
                     }
                     traineeShooting_deviceGroup_data.setName(name);
                     traineeShooting_deviceGroup_data.setTraineeStatus(traineeStatus);
@@ -492,7 +519,7 @@ public class ShootingRangeController {
                         }
                     }
                     //endmac
-                    //
+                    //修改当前打靶人的状态
                     int trainingId = trainee.getTrainingId();
                     Training training = trainingService.getTrainingById(trainingId);
                     String target_number = deviceGroupIndex + "";
@@ -513,7 +540,7 @@ public class ShootingRangeController {
                     param.setName(name);
                     param.setPassword(password);
                     param.setPhoto(photo);
-                    param.setStatus(TraineeStatus.FINISH_SHOOTING);//更改打靶人状态，为正在射击状态
+                    param.setStatus(TraineeStatus.FINISH_SHOOTING);//更改打靶人状态，为完成射击状态
                     param.setTrainingId(trainingId);
                     param.setWorkunit(workunit);
                     param.setPhone(phone);
@@ -535,12 +562,12 @@ public class ShootingRangeController {
                     endshooting_command_to_camera.put("shooting_status", 1);
                     messageProducer.sendTopicMessage("server-to-camera-exchange", "server-to-camera-queue-routing-key", endshooting_command_to_camera.toJSONString());
                     //向消息队列发出射击者需要显示界面信息
-                    /*Command shootingCommand=new Command();
+                    Command shootingCommand=new Command();
                     shootingCommand.setCode(0);
                     shootingCommand.setMessage("开始射击");
-                    shootingCommand.setDataType(ServerCommand.STARTSHOOTING_COMMAND);
+                    shootingCommand.setDataType(ServerCommand.ENDSHOOTING_COMMAND);
 
-                    ShootingInfo shootingInfo=new ShootingInfo();
+                    /*ShootingInfo shootingInfo=new ShootingInfo();
                     shootingInfo.setBullet_count(bullet_count);
                     shootingInfo.setDepartment(workunit);
                     shootingInfo.setGroup_number(group_number);
@@ -548,10 +575,10 @@ public class ShootingRangeController {
                     shootingInfo.setShooting_gun(gun);
                     shootingInfo.setUserId(traineeId+"");
                     shootingInfo.setTarget_number(target_number);
-                    shootingCommand.setData(shootingInfo);
-                    JSONObject jo= (JSONObject) JSONObject.toJSON(shootingCommand);
+                  shootingCommand.setData(shootingInfo);
+  */                JSONObject jo= (JSONObject) JSONObject.toJSON(shootingCommand);
                     messageProducer.sendTopicMessage("server-to-display-exchange","server-to-display-routing-key-"+displayMac,jo.toJSONString());
-*/
+
                     //改变为射击状态
                     try {
                         traineeGroupService.stopShooting();
@@ -630,7 +657,12 @@ public class ShootingRangeController {
                     //开始射击，发给识别模块，识别模块开始识别图像
                     JSONObject endshooting_command_to_camera = new JSONObject();
                     endshooting_command_to_camera.put("shooting_status", 0);
-                    messageProducer.sendTopicMessage("server-to-camera-exchange", "server-to-camera-queue-routing-key", endshooting_command_to_camera.toJSONString());
+                    try {
+                        messageProducer.sendTopicMessage("server-to-camera-exchange", "server-to-camera-queue-routing-key", endshooting_command_to_camera.toJSONString());
+                    }catch (Exception e)
+                    {
+                        System.out.print("向camera端发送打靶命令失败，可能是消息队列没有建立");
+                    }
 
 
                     //向消息队列发出射击者需要显示界面信息
@@ -649,8 +681,12 @@ public class ShootingRangeController {
                     shootingInfo.setTarget_number(target_number);
                     shootingCommand.setData(shootingInfo);
                     JSONObject jo = (JSONObject) JSONObject.toJSON(shootingCommand);
-                    messageProducer.sendTopicMessage("server-to-display-exchange", "server-to-display-routing-key-" + displayMac, jo.toJSONString());
-
+                    try {
+                        messageProducer.sendTopicMessage("server-to-display-exchange", "server-to-display-routing-key-" + displayMac, jo.toJSONString());
+                    }catch (Exception e)
+                    {
+                        System.out.print("向display端发送打靶命令失败，可能是消息队列没有建立");
+                    }
 
                     //改变为射击状态
                     try {
@@ -665,46 +701,246 @@ public class ShootingRangeController {
         return null;
     }
 
+
+
     @RequestMapping("/uploadPaper.json")
     @ResponseBody
-    public void uploadPaper() throws ParseException {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                ClientFactory clientFactory=new ClientFactory();
+    public void uploadPaper1() throws ParseException {
+        int  timeOut =  3000 ;
+        Trainee_Group trainee_group_in_shooting = traineeGroupService.getTraineeGroupInShooting();//当前射击编组
+        if (trainee_group_in_shooting != null)//
+        {
+            String traineeIds = trainee_group_in_shooting.getTraineeIds();
+            String[] traineeIdArray = traineeIds.split(",");
+            for (int i = 0; i < traineeIdArray.length; i++) {//修改新进入靶位者的状态，同时把对应信息推入对应靶位的display
+                int traineeId = Integer.parseInt(traineeIdArray[i].trim());
+                Trainee trainee = traineeService.getTraineeById(traineeId);
+                String targetIP = "";
+                if (trainee != null) {
+                    //取得靶位对应的display的mac
+                    int deviceGroupIndex = i + 1;
+                    Device_Group device_group = deviceGroupService.getDeviceGroupByIndex(deviceGroupIndex);
+                    if (device_group != null) {
+                        int targetIndex = device_group.getTargetId();
+                        Target target = targetService.getTargetByIndex(targetIndex);
+                        if (target != null) {
+                            targetIP = target.getIp();
+                            if(checkIpStatus(targetIP)){
+                                try {
+                                    Client client=clientMap.get(targetIP);
+                                    if(client==null) {
+                                        client = ClientFactory.createClient(targetIP, port,deviceGroupIndex);
+                                        clientMap.put(targetIP,client);
+                                    }else if(client!=null)
+                                    {
+                                        if(client.getSocket()!=null)
+                                        {
+                                            if(client.getSocket().isClosed())
+                                            {
+                                                client = ClientFactory.createClient(targetIP, port, deviceGroupIndex);
+                                                clientMap.put(targetIP, client);
+                                            }
+                                            else
+                                            {
 
-                try {
-                    Client client= clientFactory.createClient("192.168.1.3",5000);
-                    client.send("10");
-                } catch (Exception e) {
-                    e.printStackTrace();
+                                                if(isHostConnectable(targetIP,5000)){
+                                                    client = ClientFactory.createClient(targetIP, port, deviceGroupIndex);
+                                                    clientMap.put(targetIP,client);
+                                                }
+
+                                            }
+                                        }else {
+                                            client = ClientFactory.createClient(targetIP, port, deviceGroupIndex);
+                                            clientMap.put(targetIP, client);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }
                 }
-
             }
-        }).start();
+            for (String targetIp : clientMap.keySet()) {
+                if (checkIpStatus(targetIp)) {
+                    Client client = clientMap.get(targetIp);
+//                    Socket socket = client.getSocket();
+//                    new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            try {
+//                                if (client != null) {
+//                                    client.send("10");
+//                                }
+//                            } catch (Exception e) {
+//                                e.printStackTrace();
+//                                client.stop();
+//                            }
+//                        }
+//                    }).start();
+                    client.send1("10");
+                }
+            }
+
+        }
     }
-//public void uploadPaper()throws Exception{
-//        SocketUtils.sendCmd("10");
+
+
+
+//    @RequestMapping("/downloadPaper.json")
+//    @ResponseBody
+//    public void downloadPaper()throws Exception{
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//
+//                try {
+//                    if(client!=null) {
+//                        client.send("11");
+//                    }
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+////                    client.stop();
+////
+//                }
+//
+//            }
+//        }).start();
 //    }
-
-
     @RequestMapping("/downloadPaper.json")
     @ResponseBody
     public void downloadPaper()throws Exception{
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                ClientFactory clientFactory=new ClientFactory();
-
-                try {
-                    Client client= clientFactory.createClient("192.168.1.3",5000);
-                    client.send("11");
-                } catch (Exception e) {
-                    e.printStackTrace();
+        int  timeOut =  3000 ;
+        Trainee_Group trainee_group_in_shooting = traineeGroupService.getTraineeGroupInShooting();//当前射击编组
+        if (trainee_group_in_shooting != null)//
+        {
+            String traineeIds = trainee_group_in_shooting.getTraineeIds();
+            String[] traineeIdArray = traineeIds.split(",");
+            for (int i = 0; i < traineeIdArray.length; i++) {//修改新进入靶位者的状态，同时把对应信息推入对应靶位的display
+                int traineeId = Integer.parseInt(traineeIdArray[i].trim());
+                Trainee trainee = traineeService.getTraineeById(traineeId);
+                String targetIP = "";
+                if (trainee != null) {
+                    //取得靶位对应的display的mac
+                    int deviceGroupIndex = i + 1;
+                    Device_Group device_group = deviceGroupService.getDeviceGroupByIndex(deviceGroupIndex);
+                    if (device_group != null) {
+                        int targetIndex = device_group.getTargetId();
+                        Target target = targetService.getTargetByIndex(targetIndex);
+                        if (target != null) {
+                            targetIP = target.getIp();
+                            if(checkIpStatus(targetIP)){
+                                try {
+                                    Client client=clientMap.get(targetIP);
+                                    if(client==null) {
+                                        client = ClientFactory.createClient(targetIP, port,deviceGroupIndex);
+                                        clientMap.put(targetIP,client);
+                                    }else if(client!=null)
+                                    {
+                                        if(client.getSocket()!=null)
+                                        {
+                                            if(client.getSocket().isClosed())
+                                            {
+                                                client = ClientFactory.createClient(targetIP, port, deviceGroupIndex);
+                                                clientMap.put(targetIP, client);
+                                            }else
+                                            {
+//                                                if(isHostConnectable(targetIP,5000)){
+                                                    Client client_old = clientMap.get(targetIP);
+                                                    client.stop();
+                                                    client = ClientFactory.createClient(targetIP, port, deviceGroupIndex);
+                                                    clientMap.put(targetIP,client);
+//                                                }
+                                            }
+                                        }else {
+                                            client = ClientFactory.createClient(targetIP, port, deviceGroupIndex);
+                                            clientMap.put(targetIP, client);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }
                 }
-
             }
-        }).start();
+            for (String targetIp : clientMap.keySet()) {
+               if (checkIpStatus(targetIp)) {
+                    Client client = clientMap.get(targetIp);
+//                    Socket socket = client.getSocket();
+////                    new Thread(new Runnable() {
+////                        @Override
+////                        public void run() {
+////                            try {
+////                                if (client != null) {
+////                                    client.send("11");
+////                                }
+////                            } catch (Exception e) {
+////                                e.printStackTrace();
+////                                client.stop();
+////                            }
+////                        }
+////                    }).start();
+                    client.send1("11");
+                }
+            }
+        }
+    }
+
+    public Boolean isServerClose(Socket socket){
+        try{
+            socket.sendUrgentData(0xFF);//发送1个字节的紧急数据，默认情况下，服务器端没有开启紧急数据处理，不影响正常通信
+            return false;
+        }catch(Exception se){
+            return true;
+        }
+    }
+    public static boolean checkIpStatus(String ipAddress) {
+        boolean reachable = false;
+        try {
+            reachable = InetAddress.getByName(ipAddress).isReachable(100);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return reachable;
+    }
+//    public Boolean isServerClose(Socket socket){
+//        try{
+//            socket.sendUrgentData(0xFF);//发送1个字节的紧急数据，默认情况下，服务器端没有开启紧急数据处理，不影响正常通信
+//            return false;
+//        }catch(Exception se){
+//            return true;
+//        }
+//    }
+
+    public static boolean isHostConnectable(String host, int port) {
+        Socket socket = new Socket();
+        try {
+            socket.connect(new InetSocketAddress(host, port));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return true;
+    }
+
+    private Boolean canSend(Socket socket,String message){
+        try{
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            out.println(message);
+            return true;
+        }catch(Exception se){
+            se.printStackTrace();
+            return false;
+        }
     }
 
 }

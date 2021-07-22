@@ -52,8 +52,6 @@ public class DeviceGroupService {
         }
         return PageResult.<Device_Group>builder().build();
     }
-
-
     public Device_Group getDeviceGroupByIndex(Integer group_index) {
     Device_Group device_group=device_groupMapper.getDeviceGroupByIndex(group_index);
     return device_group;
@@ -67,7 +65,6 @@ public class DeviceGroupService {
     public void delete(int deviceGroupId) {
         Device_Group device_group = device_groupMapper.selectByPrimaryKey(deviceGroupId);
         Preconditions.checkNotNull(device_group, "待删除的训练计划不存在，无法删除");
-
         //TODO 删除时判断有没有依赖数据,比如打靶成绩
         device_groupMapper.deleteByPrimaryKey(deviceGroupId);
     }

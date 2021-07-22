@@ -15,14 +15,27 @@
     <result column="mac" property="mac" jdbcType="VARCHAR" />
     <result column="radius" property="radius" jdbcType="REAL" />
     <result column="mmOfRadius" property="mmofradius" jdbcType="REAL" />
+    <result column="lx" property="lx" jdbcType="REAL" />
+    <result column="ly" property="ly" jdbcType="REAL" />
+    <result column="rx" property="rx" jdbcType="REAL" />
+    <result column="ry" property="ry" jdbcType="REAL" />
+    <result column="training_id" property="trainingId" jdbcType="INTEGER" />
+  </resultMap>
+  <resultMap id="ResultMapWithBLOBs" type="com.mmall.model.Scores" extends="BaseResultMap" >
+    <result column="image" property="image" jdbcType="LONGVARCHAR" />
   </resultMap>
   <sql id="Base_Column_List" >
     id, score_index, trainee_id, hitting_time, px, py, mx, my, offset, ringNumber, mac, 
-    radius, mmOfRadius
+    radius, mmOfRadius, lx, ly, rx, ry, training_id
   </sql>
-  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
+  <sql id="Blob_Column_List" >
+    image
+  </sql>
+  <select id="selectByPrimaryKey" resultMap="ResultMapWithBLOBs" parameterType="java.lang.Integer" >
     select 
     <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
     from scores
     where id = #{id,jdbcType=INTEGER}
   </select>
@@ -34,11 +47,15 @@
     insert into scores (id, score_index, trainee_id, 
       hitting_time, px, py, mx, 
       my, offset, ringNumber, mac, 
-      radius, mmOfRadius)
+      radius, mmOfRadius, lx, ly, 
+      rx, ry, training_id, image
+      )
     values (#{id,jdbcType=INTEGER}, #{scoreIndex,jdbcType=INTEGER}, #{traineeId,jdbcType=INTEGER}, 
       #{hittingTime,jdbcType=TIMESTAMP}, #{px,jdbcType=REAL}, #{py,jdbcType=REAL}, #{mx,jdbcType=REAL}, 
       #{my,jdbcType=REAL}, #{offset,jdbcType=VARCHAR}, #{ringnumber,jdbcType=REAL}, #{mac,jdbcType=VARCHAR}, 
-      #{radius,jdbcType=REAL}, #{mmofradius,jdbcType=REAL})
+      #{radius,jdbcType=REAL}, #{mmofradius,jdbcType=REAL}, #{lx,jdbcType=REAL}, #{ly,jdbcType=REAL}, 
+      #{rx,jdbcType=REAL}, #{ry,jdbcType=REAL}, #{trainingId,jdbcType=INTEGER}, #{image,jdbcType=LONGVARCHAR}
+      )
   </insert>
   <insert id="insertSelective" parameterType="com.mmall.model.Scores" >
     insert into scores
@@ -82,6 +99,24 @@
       <if test="mmofradius != null" >
         mmOfRadius,
       </if>
+      <if test="lx != null" >
+        lx,
+      </if>
+      <if test="ly != null" >
+        ly,
+      </if>
+      <if test="rx != null" >
+        rx,
+      </if>
+      <if test="ry != null" >
+        ry,
+      </if>
+      <if test="trainingId != null" >
+        training_id,
+      </if>
+      <if test="image != null" >
+        image,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides="," >
       <if test="id != null" >
@@ -122,6 +157,24 @@
       </if>
       <if test="mmofradius != null" >
         #{mmofradius,jdbcType=REAL},
+      </if>
+      <if test="lx != null" >
+        #{lx,jdbcType=REAL},
+      </if>
+      <if test="ly != null" >
+        #{ly,jdbcType=REAL},
+      </if>
+      <if test="rx != null" >
+        #{rx,jdbcType=REAL},
+      </if>
+      <if test="ry != null" >
+        #{ry,jdbcType=REAL},
+      </if>
+      <if test="trainingId != null" >
+        #{trainingId,jdbcType=INTEGER},
+      </if>
+      <if test="image != null" >
+        #{image,jdbcType=LONGVARCHAR},
       </if>
     </trim>
   </insert>
@@ -164,7 +217,47 @@
       <if test="mmofradius != null" >
         mmOfRadius = #{mmofradius,jdbcType=REAL},
       </if>
+      <if test="lx != null" >
+        lx = #{lx,jdbcType=REAL},
+      </if>
+      <if test="ly != null" >
+        ly = #{ly,jdbcType=REAL},
+      </if>
+      <if test="rx != null" >
+        rx = #{rx,jdbcType=REAL},
+      </if>
+      <if test="ry != null" >
+        ry = #{ry,jdbcType=REAL},
+      </if>
+      <if test="trainingId != null" >
+        training_id = #{trainingId,jdbcType=INTEGER},
+      </if>
+      <if test="image != null" >
+        image = #{image,jdbcType=LONGVARCHAR},
+      </if>
     </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.mmall.model.Scores" >
+    update scores
+    set score_index = #{scoreIndex,jdbcType=INTEGER},
+      trainee_id = #{traineeId,jdbcType=INTEGER},
+      hitting_time = #{hittingTime,jdbcType=TIMESTAMP},
+      px = #{px,jdbcType=REAL},
+      py = #{py,jdbcType=REAL},
+      mx = #{mx,jdbcType=REAL},
+      my = #{my,jdbcType=REAL},
+      offset = #{offset,jdbcType=VARCHAR},
+      ringNumber = #{ringnumber,jdbcType=REAL},
+      mac = #{mac,jdbcType=VARCHAR},
+      radius = #{radius,jdbcType=REAL},
+      mmOfRadius = #{mmofradius,jdbcType=REAL},
+      lx = #{lx,jdbcType=REAL},
+      ly = #{ly,jdbcType=REAL},
+      rx = #{rx,jdbcType=REAL},
+      ry = #{ry,jdbcType=REAL},
+      training_id = #{trainingId,jdbcType=INTEGER},
+      image = #{image,jdbcType=LONGVARCHAR}
     where id = #{id,jdbcType=INTEGER}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.mmall.model.Scores" >
@@ -180,7 +273,12 @@
       ringNumber = #{ringnumber,jdbcType=REAL},
       mac = #{mac,jdbcType=VARCHAR},
       radius = #{radius,jdbcType=REAL},
-      mmOfRadius = #{mmofradius,jdbcType=REAL}
+      mmOfRadius = #{mmofradius,jdbcType=REAL},
+      lx = #{lx,jdbcType=REAL},
+      ly = #{ly,jdbcType=REAL},
+      rx = #{rx,jdbcType=REAL},
+      ry = #{ry,jdbcType=REAL},
+      training_id = #{trainingId,jdbcType=INTEGER}
     where id = #{id,jdbcType=INTEGER}
   </update>
 </mapper>

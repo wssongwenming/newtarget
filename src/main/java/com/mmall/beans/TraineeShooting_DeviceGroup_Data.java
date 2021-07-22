@@ -12,8 +12,8 @@ public class TraineeShooting_DeviceGroup_Data {
     private int traineeStatus;
     private String photo;
     private List<Scores> shootingScoreList;
-    private Float totalScore;
-
+//    private Float totalScore;
+    private int totalScore;
     //靶位设备信息
     private int displayStatus;
     private int cameraStatus;
@@ -87,11 +87,11 @@ public class TraineeShooting_DeviceGroup_Data {
         this.targetStatus = targetStatus;
     }
 
-    public Float getTotalScore() {
+    public int getTotalScore() {
         return totalScore;
     }
 
-    public void setTotalScore(Float totalScore) {
+    public void setTotalScore(int totalScore) {
         this.totalScore = totalScore;
     }
 

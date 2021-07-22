@@ -15,6 +15,7 @@ public interface ServerCommand {
     int MARK_DATA=5;
 
     int DEVICESTATUS=6;
+    int ENDSHOOTING_COMMAND= 7;
 
 
 

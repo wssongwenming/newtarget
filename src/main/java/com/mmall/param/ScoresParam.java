@@ -42,4 +42,6 @@ public class ScoresParam {
 
     private Float mmofradius;
 
+    private String imagebase64;
+
 }
